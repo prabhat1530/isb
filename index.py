@@ -9,14 +9,14 @@ from selenium.webdriver.support import expected_conditions as EC
 BASE_URL = "https://indiankanoon.org/search/"
 COURTS = {
     "Allahabad High Court": "allahabad",
-    "Bombay High Court": "bombay",
+    "Bombay High Court": "bombay"
 }
 
 # Updated Date Filters (DD-MM-YYYY format)
 DATE_FILTERS = [
     ("1-1-2024", "31-1-2024"),
     ("1-2-2024", "29-2-2024"),
-    ("1-3-2024", "31-3-2024"),
+    ("1-3-2024", "31-3-2024")
 ]
 
 def scrape_data():
@@ -48,7 +48,7 @@ def scrape_data():
 
             # Extract case links
             case_links = [a.get_attribute("href") for a in driver.find_elements(By.CSS_SELECTOR, ".result .result_title a")]
-            print(case_links,'vhgjh')
+           
 
             if not case_links:
                 print(f"⚠ No cases found for {court_name} from {start_date} to {end_date}")
@@ -58,14 +58,16 @@ def scrape_data():
                 print(f"📄 Fetching Case: {case_url}")
                 driver.get(case_url)
                 time.sleep(3)  # Allow page to load
+                
 
                 try:
                     case_details = {
-                        "High Court": court_name,
-                        "Case Title": get_text(driver, ".docsource_main"),
+                        "High Court": get_text(driver,'.docsource_main'),
+                        "Case Title": get_text(driver, ".doc_title"),
                         "Bench": get_text(driver, ".doc_bench"),
-                        "Grey Box Text": get_text(driver, "#pre_1"),
-                        "Judgement Text": get_text(driver, ".judgments"),
+                        "Case details": get_text(driver, "#pre_1"),
+                        "Judgement Text": get_judgement_text(driver),
+
                     }
                     data.append(case_details)
                 except Exception as e:
@@ -80,6 +82,21 @@ def get_text(driver, selector):
         return WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, selector))).text.strip()
     except:
         return "N/A"
+def get_judgement_text(driver):
+    """Extracts judgment text starting from the 7th child element."""
+    try:
+        parent_element = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".judgments"))
+        )
+        children = parent_element.find_elements(By.XPATH, "./*")  # Get all child elements
+
+        # Extract text from the 7th child onwards
+        judgement_text = "\n".join(child.text for child in children[6:] if child.text)
+
+        return judgement_text if judgement_text else "N/A"
+    except:
+        return "N/A"
+      
 
 def save_to_excel(data):
     df = pd.DataFrame(data)
