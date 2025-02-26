@@ -12,7 +12,7 @@ COURTS = {
     "Bombay High Court": "bombay",
 }
 
-# Updated Date Ranges (Start Date - End Date)
+# Updated Date Filters (DD-MM-YYYY format)
 DATE_FILTERS = [
     ("1-1-2024", "31-1-2024"),
     ("1-2-2024", "29-2-2024"),
@@ -22,6 +22,10 @@ DATE_FILTERS = [
 def scrape_data():
     options = uc.ChromeOptions()
     options.headless = False  # Set to True for headless mode
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_argument("start-maximized")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
+
     driver = uc.Chrome(options=options)
 
     data = []
@@ -30,12 +34,21 @@ def scrape_data():
         for start_date, end_date in DATE_FILTERS:
             print(f"🔍 Scraping {court_name} from {start_date} to {end_date}...")
 
-            url = f"{BASE_URL}?formInput=court%3A{court_param}+fromdate%3A{start_date}+todate%3A{end_date}"
+            url = f"{BASE_URL}?formInput=doctypes%3A{court_param}+fromdate%3A{start_date}+todate%3A{end_date}"
+            print(f"➡ Navigating to: {url}")
+            
             driver.get(url)
-            time.sleep(5)  # Wait for Cloudflare challenge
+            time.sleep(5)  # Wait for Cloudflare
+
+            # Debug: Check if page loaded
+            page_source = driver.page_source
+            if "No results found" in page_source or "did not match any documents" in page_source:
+                print(f"⚠ No cases found for {court_name} from {start_date} to {end_date}")
+                continue
 
             # Extract case links
-            case_links = [a.get_attribute("href") for a in driver.find_elements(By.CSS_SELECTOR, "a.result_title")]
+            case_links = [a.get_attribute("href") for a in driver.find_elements(By.CSS_SELECTOR, ".result .result_title a")]
+            print(case_links,'vhgjh')
 
             if not case_links:
                 print(f"⚠ No cases found for {court_name} from {start_date} to {end_date}")
